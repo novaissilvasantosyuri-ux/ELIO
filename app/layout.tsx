@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Nunito, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/components/providers";
+import { PwaRegister } from "@/components/pwa-register";
 
 const display = Nunito({
   subsets: ["latin"],
@@ -57,6 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className={`${display.variable} ${sans.variable} font-sans`}>
         <AppProvider>{children}</AppProvider>
+        <PwaRegister />
       </body>
     </html>
   );

@@ -1,4 +1,9 @@
-/* Elio service worker (Fase 4): notificações push. Sem cache offline em v1. */
+/* Elio service worker (Fase 4 + PWA): notificações push + instalabilidade. Sem cache offline em v1. */
+
+// Passagem direta (não muda nada no tráfego; só satisfaz o critério "instalável" do Chrome).
+self.addEventListener("fetch", (event) => {
+  event.respondWith(fetch(event.request));
+});
 
 self.addEventListener("push", (event) => {
   let data = {};
