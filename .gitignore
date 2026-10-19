@@ -1,0 +1,27 @@
+# dependências e build
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# ambiente (NUNCA commitar segredos)
+.env
+.env.local
+.env.*.local
+
+# sistema e editores
+.DS_Store
+Thumbs.db
+*.pem
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# testes e tipos locais
+test-results/
+playwright-report/
+playwright/.cache/
+coverage/
+next-env.d.ts
+*.tsbuildinfo
