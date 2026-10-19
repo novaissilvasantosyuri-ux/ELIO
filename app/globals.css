@@ -1,0 +1,198 @@
+@import "tailwindcss";
+
+/* ============================================================
+   ELIO — Design System (Fase 1)
+   Tokens em variáveis CSS; o Tailwind referencia via @theme inline,
+   então a troca de tema (data-theme) funciona em tempo real.
+   ============================================================ */
+
+@theme {
+  --breakpoint-tablet: 700px;
+  --breakpoint-desktop: 1100px;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Nunito", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-soft: var(--brand-soft);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-sent-from: var(--sent-from);
+  --color-sent-to: var(--sent-to);
+  --color-bubble: var(--bubble);
+  --color-online: var(--online);
+  --color-away: var(--away);
+  --color-busy: var(--busy);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ok: var(--ok);
+  --shadow-soft: var(--shadow-soft);
+  --shadow-pop: var(--shadow-pop);
+}
+
+:root {
+  color-scheme: light;
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --surface-2: #f2f0ea;
+  --line: #e8e5dc;
+  --ink: #1e1b3a;
+  --muted: #6b6a86;
+  --brand: #4b1fb0;
+  --brand-deep: #2e0f6b;
+  --brand-soft: #efe8fb;
+  --accent: #4c6fff;
+  --accent-soft: #e8edff;
+  --sent-from: #7c85f5;
+  --sent-to: #8f94f7;
+  --bubble: #ffffff;
+  --online: #34c759;
+  --away: #f5a524;
+  --busy: #e5484d;
+  --danger: #d92d20;
+  --danger-soft: #fdeceb;
+  --ok: #1f9d55;
+  --shadow-soft: 0 8px 24px rgb(46 15 107 / 8%);
+  --shadow-pop: 0 16px 48px rgb(46 15 107 / 16%);
+  --pad-list: 12px;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e0923;
+  --surface: #171135;
+  --surface-2: #1f1745;
+  --line: #2c2358;
+  --ink: #f1effa;
+  --muted: #a7a3c7;
+  --brand: #9a7bff;
+  --brand-deep: #c4b0ff;
+  --brand-soft: #251a52;
+  --accent: #7d9bff;
+  --accent-soft: #1d2a5e;
+  --sent-from: #5b63eb;
+  --sent-to: #7c85f5;
+  --bubble: #221a4e;
+  --online: #34c759;
+  --away: #f5a524;
+  --busy: #ff6b6b;
+  --danger: #ff7070;
+  --danger-soft: #3d1a26;
+  --ok: #4ade80;
+  --shadow-soft: 0 8px 24px rgb(0 0 0 / 40%);
+  --shadow-pop: 0 16px 48px rgb(0 0 0 / 55%);
+}
+
+/* Tamanho da fonte (config do usuário): P / M / G */
+[data-font="sm"] { font-size: 15px; }
+[data-font="md"] { font-size: 16px; }
+[data-font="lg"] { font-size: 17.5px; }
+
+/* Densidade */
+[data-density="compact"] { --pad-list: 7px; }
+
+/* ---------- base ---------- */
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
+}
+::selection { background: color-mix(in srgb, var(--accent) 25%, transparent); }
+
+/* foco visível (acessibilidade) */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---------- painéis em vidro fosco ---------- */
+.glass {
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ---------- rolagem ---------- */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--muted) 40%, transparent); border-radius: 99px; }
+*::-webkit-scrollbar-track { background: transparent; }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ---------- animações curtas e discretas ---------- */
+@keyframes elio-fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes elio-pop {
+  0% { opacity: 0; transform: scale(0.96); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes elio-shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes elio-typing {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+.anim-fade-up { animation: elio-fade-up 200ms ease-out both; }
+.anim-pop { animation: elio-pop 180ms ease-out both; }
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--line) 50%, var(--surface-2) 75%);
+  background-size: 800px 100%;
+  animation: elio-shimmer 1.2s linear infinite;
+}
+.typing-dot { animation: elio-typing 1.2s ease-in-out infinite; }
+.typing-dot:nth-child(2) { animation-delay: 150ms; }
+.typing-dot:nth-child(3) { animation-delay: 300ms; }
+
+/* respeita quem prefere menos movimento */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+[data-motion="reduced"] *, [data-motion="reduced"] *::before, [data-motion="reduced"] *::after {
+  animation-duration: 0.01ms !important; transition-duration: 0.01ms !important;
+}
+
+/* ---------- chat ---------- */
+.chat-wallpaper { background-size: cover; background-position: center; }
+.msg-group-first { border-top-left-radius: 20px; border-top-right-radius: 20px; }
+textarea.composer { field-sizing: content; max-height: 9.5rem; }
+@supports not (field-sizing: content) {
+  textarea.composer { height: 2.75rem; }
+}
+
+/* links dentro de mensagens */
+.msg-link { text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
+.msg-sent .msg-link { color: #fff; }
+.msg-received .msg-link { color: var(--accent); }
+
+/* slider de zoom / controles */
+input[type="range"].elio-range { accent-color: var(--brand); }
+
+/* altura real no celular (teclado): complementa o dvh */
+:root { --vvh: 100dvh; }
+.h-app { height: 100dvh; }
+@supports (height: 100svh) {
+  .h-app { height: 100dvh; }
+}
+
+/* Fase 6: espelha a prévia local (efeito "espelho" natural) */
+.mirror { transform: scaleX(-1); }
+
+/* Fase 7: pula render de linhas fora da tela (listas longas) */
+.cv-row { content-visibility: auto; contain-intrinsic-size: auto 64px; }

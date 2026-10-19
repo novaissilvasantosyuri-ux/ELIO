@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 72">
+  <defs>
+    <radialGradient id="la" cx="0%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#8B5CF6" stop-opacity=".55"/>
+      <stop offset="100%" stop-color="#8B5CF6" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="lb" cx="100%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#7DD3FC" stop-opacity=".6"/>
+      <stop offset="100%" stop-color="#7DD3FC" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g transform="translate(4,4) scale(0.9375)">
+    <rect x="2" y="2" width="60" height="60" rx="20" fill="#F5F2FB"/>
+    <rect x="2" y="2" width="60" height="60" rx="20" fill="url(#la)"/>
+    <rect x="2" y="2" width="60" height="60" rx="20" fill="url(#lb)"/>
+    <path d="M24 40 C 28 28, 36 28, 40 24" fill="none" stroke="#2E0F6B" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="21" cy="41" r="7.5" fill="#F5F2FB" stroke="#2E0F6B" stroke-width="4.5"/>
+    <circle cx="43" cy="23" r="7.5" fill="#F5F2FB" stroke="#2E0F6B" stroke-width="4.5"/>
+  </g>
+  <text x="72" y="42" font-family="Nunito, 'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="30" fill="#2E0F6B" letter-spacing="-0.5">elio</text>
+  <text x="73" y="60" font-family="'Plus Jakarta Sans', sans-serif" font-weight="700" font-size="8.5" fill="#4B1FB0" letter-spacing="2.1">PERTO DE QUEM IMPORTA</text>
+</svg>
