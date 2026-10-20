@@ -254,3 +254,19 @@ export const paginationSchema = z.object({
   before_id: uuidSchema.optional(),
   limit: z.coerce.number().int().min(1).max(50).default(30),
 });
+
+const STORAGE_BUCKETS = ["avatars", "banners", "wallpapers", "chat-media", "community-avatars"];
+
+/**
+ * Aceita caminhos do nosso Storage: o formato que o app envia ("usuario/arquivo.webp"),
+ * com prefixo do bucket ("avatars/usuario/arquivo") ou URL pública nossa.
+ * Recusa URL externa e ".." (passeio de diretório).
+ */
+export function isStoragePath(v: string): boolean {
+  if (typeof v !== "string" || v.length === 0 || v.length > 500) return false;
+  if (/^https?:\/\//i.test(v)) {
+    return STORAGE_BUCKETS.some((b) => v.includes(`/${b}/`));
+  }
+  if (v.startsWith("/") || v.includes("..") || v.includes("\\")) return false;
+  return /^[A-Za-z0-9_\-./]+$/.test(v);
+}

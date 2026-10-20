@@ -11,6 +11,7 @@ import {
   endCallSchema,
   groupDescSchema,
   groupTitleSchema,
+  isStoragePath,
   joinByInviteSchema,
   memberActionSchema,
   pushSubscriptionSchema,
@@ -127,5 +128,20 @@ describe("schemas de chamada (Fase 6)", () => {
       expect(endCallSchema.safeParse({ action }).success).toBe(true);
     }
     expect(endCallSchema.safeParse({ action: "sumir" }).success).toBe(false);
+  });
+});
+
+describe("isStoragePath (correção foto/banner/wallpaper)", () => {
+  it("aceita o formato que o app envia + prefixado + URL nossa", () => {
+    expect(isStoragePath("a1b2c3/123456-abc.webp")).toBe(true);
+    expect(isStoragePath("avatars/a1b2c3/123456-abc.webp")).toBe(true);
+    expect(isStoragePath("https://xyzcompany.supabase.co/storage/v1/object/public/avatars/a1b2c3/f.webp")).toBe(true);
+  });
+
+  it("recusa URL externa, .. e vazio", () => {
+    expect(isStoragePath("https://evil.com/foto.png")).toBe(false);
+    expect(isStoragePath("../../../etc/passwd")).toBe(false);
+    expect(isStoragePath("/absoluto/foto.png")).toBe(false);
+    expect(isStoragePath("")).toBe(false);
   });
 });

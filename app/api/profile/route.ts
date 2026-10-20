@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { authed, apiError, rpcErrorMessage, zodError } from "@/app/api/_helpers";
-import { profilePatchSchema } from "@/lib/schemas";
+import { isStoragePath, profilePatchSchema } from "@/lib/schemas";
 import { clientIp, envLimit, rateLimit, audit } from "@/lib/security";
 
 /** PATCH /api/profile — atualiza o próprio perfil (username passa pelo RPC com limite). */
@@ -40,9 +40,7 @@ export async function PATCH(req: NextRequest) {
     for (const f of ["avatar_url", "banner_url"] as const) {
       const v = patch[f];
       if (typeof v === "string" && v.length > 0) {
-        const ok =
-          v.startsWith("avatars/") || v.startsWith("banners/") || v.includes("/avatars/") || v.includes("/banners/");
-        if (!ok) return apiError("Imagem inválida. Envie pelo app.", 400);
+        if (!isStoragePath(v)) return apiError("Imagem inválida. Envie pelo app.", 400);
       }
     }
     const { error } = await ctx.sb.from("profiles").update(patch).eq("id", ctx.user.id);

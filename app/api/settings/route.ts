@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { authed, apiError, zodError } from "@/app/api/_helpers";
-import { settingsPatchSchema } from "@/lib/schemas";
+import { isStoragePath, settingsPatchSchema } from "@/lib/schemas";
 import { clientIp, envLimit, rateLimit } from "@/lib/security";
 
 /** PATCH /api/settings — salva aparência/privacidade/notificações na conta (sincroniza aparelhos). */
@@ -23,7 +23,7 @@ export async function PATCH(req: NextRequest) {
   const w = (body as { wallpaper?: { value?: { kind?: string; url?: string } } }).wallpaper;
   if (w?.value?.kind === "image") {
     const url = w.value.url ?? "";
-    if (!url.includes("/wallpapers/") && !url.startsWith("wallpapers/")) {
+    if (!isStoragePath(url)) {
       return apiError("Imagem inválida. Envie pelo app.", 400);
     }
   }
