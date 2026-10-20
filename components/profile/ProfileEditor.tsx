@@ -174,7 +174,7 @@ export function ProfileEditor() {
               {uploadingBanner ? <Spinner size={15} /> : <Icon name="image" size={15} />}
               {t("profile.bannerImage")}
             </button>
-            <input ref={bannerRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => void uploadBanner(e.target.files?.[0])} />
+            <input ref={bannerRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={(e) => void uploadBanner(e.target.files?.[0])} />
           </div>
         </div>
         <div className="px-5 pb-5">

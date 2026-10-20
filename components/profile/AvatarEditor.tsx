@@ -154,7 +154,7 @@ export function AvatarEditor({
             </Button>
           )}
           <input
-            ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+            ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden"
             onChange={(e) => onFile(e.target.files?.[0])} aria-label={t("profile.chooseFile")}
           />
           <input

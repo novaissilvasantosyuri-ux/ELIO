@@ -7,10 +7,17 @@
 
 export const AVATAR_MAX_MB = 5;
 export const WALLPAPER_MAX_MB = 8;
-const OK_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const OK_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif", "image/bmp"];
+const OK_EXTS = ["jpg", "jpeg", "png", "webp", "gif", "avif", "bmp"];
 
 export function validateImageFile(file: File, maxMb: number): string | null {
-  if (!OK_TYPES.includes(file.type)) return "Use uma imagem JPG, PNG ou WebP.";
+  // Alguns celulares (Android) entregam a foto sem tipo: infere pela extensão.
+  let type = file.type;
+  if (!type) {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    type = OK_EXTS.includes(ext) ? `image/${ext === "jpg" ? "jpeg" : ext}` : "";
+  }
+  if (!OK_TYPES.includes(type)) return "Use uma imagem JPG, PNG, WebP ou GIF.";
   if (file.size > maxMb * 1024 * 1024) return `A imagem precisa ter até ${maxMb} MB.`;
   return null;
 }

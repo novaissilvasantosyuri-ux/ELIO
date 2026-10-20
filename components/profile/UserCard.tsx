@@ -9,6 +9,7 @@ import {
   Avatar, Button, ConfirmDialog, EmptyState, ErrorState, Icon, Modal, Skeleton,
 } from "@/components/ui";
 import { useApp, useToast } from "@/components/providers";
+import { useCall } from "@/components/calls/CallProvider";
 import { storageUrl } from "@/lib/images";
 import { fmtLastSeen, friendlyError } from "@/lib/utils";
 import { useNow } from "@/lib/hooks";
@@ -41,6 +42,8 @@ export function UserCard({ username }: { username: string }) {
   const [muteOpen, setMuteOpen] = useState(false);
   const [blockOpen, setBlockOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [calling, setCalling] = useState(false);
+  const call = useCall();
   const now = useNow();
 
   const load = useCallback(async () => {
@@ -109,18 +112,42 @@ export function UserCard({ username }: { username: string }) {
   const startChat = async () => {
     setBusy(true);
     try {
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: p.username }),
-      });
-      const json = (await res.json()) as { id?: string; error?: string };
-      if (!res.ok || !json.id) throw new Error(json.error);
-      router.push(`/conversas/${json.id}`);
+      const id = await openDirect();
+      router.push(`/conversas/${id}`);
     } catch (e) {
       toast(friendlyError(e), "error");
     } finally {
       setBusy(false);
+    }
+  };
+
+  /** Abre (ou cria) a conversa 1-a-1 e devolve o id. */
+  const openDirect = async (): Promise<string> => {
+    const res = await fetch("/api/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: p.username }),
+    });
+    const json = (await res.json()) as { id?: string; error?: string };
+    if (!res.ok || !json.id) throw new Error(json.error);
+    return json.id;
+  };
+
+  /** Liga de verdade (voz): abre a DM e inicia a chamada. */
+  const startCall = async () => {
+    setCalling(true);
+    try {
+      const id = await openDirect();
+      call.start(id, "voice", {
+        id: p.id,
+        username: p.username,
+        display_name: p.display_name,
+        avatar_url: p.avatar_url,
+      });
+    } catch (e) {
+      toast(friendlyError(e), "error");
+    } finally {
+      setCalling(false);
     }
   };
 
@@ -204,7 +231,7 @@ export function UserCard({ username }: { username: string }) {
           )}
           <div className="grid grid-cols-2 gap-2.5 mt-5">
             <Button icon="chat" onClick={() => void startChat()} loading={busy}>{t("profile.message")}</Button>
-            <Button variant="secondary" icon="phone" onClick={() => toast(t("chat.callSoon"), "info")}>{t("profile.call")}</Button>
+            <Button variant="secondary" icon="phone" onClick={() => void startCall()} loading={calling}>{t("profile.call")}</Button>
             <Button variant="secondary" icon={muted ? "bell" : "bell-off"} onClick={() => (muted ? void setMute("off") : setMuteOpen(true))}>
               {muted ? t("profile.unmute") : t("profile.mute")}
             </Button>
