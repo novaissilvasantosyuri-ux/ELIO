@@ -103,6 +103,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <InboxCtx.Provider value={inbox}>
+      <CallProvider>
       <div className="h-app flex flex-col bg-bg">
         {!online && <OfflineBanner />}
         {!configured && (
@@ -240,7 +241,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </nav>
       </div>
-      <CallProvider />
+      </CallProvider>
     </InboxCtx.Provider>
   );
 }
