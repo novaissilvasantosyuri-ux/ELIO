@@ -20,6 +20,19 @@ self.addEventListener("push", (event) => {
     renotify: true,
     data: { url: data.url || "/conversas" },
   };
+  // chamada com o app aberto: a tela de Atender/Recusar já aparece; sem duplicar
+  if (data.type === "call") {
+    event.waitUntil(
+      self.clients
+        .matchAll({ type: "window", includeUncontrolled: true })
+        .then((list) => {
+          const visible = list.some((c) => c.visibilityState === "visible");
+          if (!visible) return self.registration.showNotification(data.title || "Elio", options);
+          return undefined;
+        }),
+    );
+    return;
+  }
   event.waitUntil(self.registration.showNotification(data.title || "Elio", options));
 });
 

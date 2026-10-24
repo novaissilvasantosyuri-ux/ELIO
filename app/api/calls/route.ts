@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { authed, apiError, rpcErrorMessage, zodError } from "@/app/api/_helpers";
 import { startCallSchema } from "@/lib/schemas";
+import { notifyCall } from "@/lib/push";
 import { envLimit, rateLimit, audit } from "@/lib/security";
 
 /** POST /api/calls { conversation_id, kind } — inicia chamada 1-a-1 (voz ou vídeo). */
@@ -28,5 +29,19 @@ export async function POST(req: NextRequest) {
   }
   const row = data as { id: string; callee_id: string };
   await audit(ctx.user.id, "call_started", { conversation_id: body.conversation_id });
+  // toque garantido: push para quem recebe (não espera; nunca quebra a ligação)
+  void (async () => {
+    try {
+      const { data: me } = await ctx.sb
+        .from("profiles")
+        .select("display_name")
+        .eq("id", ctx.user.id)
+        .maybeSingle();
+      const name = ((me as { display_name?: string } | null)?.display_name ?? "").trim();
+      await notifyCall(row.callee_id, name || "Elio", body.kind, body.conversation_id, row.id);
+    } catch {
+      /* ignora */
+    }
+  })();
   return NextResponse.json(row);
 }

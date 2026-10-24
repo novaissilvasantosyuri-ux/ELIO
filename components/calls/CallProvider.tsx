@@ -202,44 +202,90 @@ export function CallProvider({ children }: { children?: React.ReactNode }) {
     })();
   }, [user, profile, toast, endRemote, resetSoon]);
 
-  /* ---------- quem recebe: ouve o toque ---------- */
+  /* ---------- quem recebe: ouve o toque (3 caminhos) ---------- */
+
+  /** Toca de verdade (idempotente: mesma chamada não toca 2x). */
+  const handleIncomingRing = useCallback((r: {
+    call_id: string; conversation_id: string; kind: CallKind; peer: CallPeer;
+  }) => {
+    if (phaseRef.current !== "idle") return; // ocupado: ignora
+    if (sessionRef.current?.id === r.call_id) return; // já tocando esta: ignora
+    const s: CallSession = {
+      id: r.call_id,
+      conversation_id: r.conversation_id,
+      kind: r.kind,
+      am_caller: false,
+      peer: r.peer,
+    };
+    setSession(s);
+    dispatch({ type: "RING" });
+    startRingtone();
+    timeoutRef.current = setTimeout(() => {
+      if (phaseRef.current !== "ringing-in") return;
+      void endRemote(s.id, "timeout");
+      dispatch({ type: "TIMEOUT" });
+      toast(t("calls.missed"), "info");
+      resetSoon();
+    }, RING_TIMEOUT_MS);
+  }, [endRemote, resetSoon, startRingtone, toast]);
+
+  /** Busca chamada tocando para mim (recupera toque perdido). */
+  const fetchPending = useCallback(async () => {
+    try {
+      const res = await fetch("/api/calls/pending");
+      const json = (await res.json().catch(() => ({}))) as {
+        call?: {
+          id: string; conversation_id: string; kind: CallKind; status: string;
+          peer?: { id: string; username: string; display_name: string; avatar_url: string | null };
+        } | null;
+      };
+      const c = json.call;
+      if (!res.ok || !c || c.status !== "ringing" || !c.peer) return;
+      handleIncomingRing({
+        call_id: c.id, conversation_id: c.conversation_id, kind: c.kind, peer: c.peer,
+      });
+    } catch {
+      /* sem pendente: segue o jogo */
+    }
+  }, [handleIncomingRing]);
 
   useEffect(() => {
     if (!user) return;
     const sb = supabaseBrowser();
-    let ch: RealtimeChannel | null = null;
+    const channels: RealtimeChannel[] = [];
     try {
-      ch = sb
-        .channel(ringChannel(user.id), { config: { broadcast: { self: false } } })
-        .on("broadcast", { event: "ring" }, (p) => {
-          const parsed = ringPayloadSchema.safeParse(p.payload);
-          if (!parsed.success) return;
-          if (phaseRef.current !== "idle") return; // ocupado: ignora
-          const r = parsed.data;
-          const s: CallSession = {
-            id: r.call_id,
-            conversation_id: r.conversation_id,
-            kind: r.kind,
-            am_caller: false,
-            peer: r.from,
-          };
-          setSession(s);
-          dispatch({ type: "RING" });
-          startRingtone();
-          timeoutRef.current = setTimeout(() => {
-            if (phaseRef.current !== "ringing-in") return;
-            void endRemote(s.id, "timeout");
-            dispatch({ type: "TIMEOUT" });
-            toast(t("calls.missed"), "info");
-            resetSoon();
-          }, RING_TIMEOUT_MS);
-        })
-        .subscribe();
+      // caminho 1 (rápido): broadcast do toque
+      channels.push(
+        sb
+          .channel(ringChannel(user.id), { config: { broadcast: { self: false } } })
+          .on("broadcast", { event: "ring" }, (p) => {
+            const parsed = ringPayloadSchema.safeParse(p.payload);
+            if (!parsed.success) return;
+            const r = parsed.data;
+            handleIncomingRing({
+              call_id: r.call_id, conversation_id: r.conversation_id, kind: r.kind, peer: r.from,
+            });
+          })
+          .subscribe(),
+      );
+      // caminho 2 (garantido): INSERT na tabela calls (o RLS só me entrega as minhas)
+      channels.push(
+        sb
+          .channel("elio:calls")
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "calls" }, (p) => {
+            const row = (p.new ?? {}) as { callee_id?: string; status?: string };
+            if (row.callee_id !== user.id || row.status !== "ringing") return;
+            void fetchPending();
+          })
+          .subscribe(),
+      );
+      // caminho 3 (recuperação): ao abrir/logar, confere se tem toque me esperando
+      void fetchPending();
     } catch {
-      ch = null;
+      /* sem realtime: o push + pendente cobrem */
     }
     return () => {
-      if (ch) {
+      for (const ch of channels) {
         try {
           void sb.removeChannel(ch);
         } catch {
@@ -247,7 +293,7 @@ export function CallProvider({ children }: { children?: React.ReactNode }) {
         }
       }
     };
-  }, [user, toast, endRemote, resetSoon, startRingtone]);
+  }, [user, fetchPending, handleIncomingRing]);
 
   useEffect(() => () => clearTimers(), [clearTimers]);
 

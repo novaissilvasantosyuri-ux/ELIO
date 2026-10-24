@@ -104,3 +104,61 @@ export async function notifyConversation(
     /* push nunca quebra o envio */
   }
 }
+
+/**
+ * Push de chamada (toque garantido): avisa quem recebe mesmo com o app
+ * em 2º plano/fechado. Tocar na notificação abre a conversa; o app então
+ * busca a chamada pendente e mostra a tela de Atender/Recusar.
+ */
+export async function notifyCall(
+  calleeId: string,
+  callerName: string,
+  kind: "voice" | "video",
+  convId: string,
+  callId: string,
+): Promise<void> {
+  try {
+    if (!ensureVapid()) return;
+    const admin = supabaseAdmin();
+    const { data: subs } = await admin
+      .from("push_subscriptions")
+      .select("endpoint, p256dh, auth")
+      .eq("user_id", calleeId);
+    const targets = (subs ?? []) as Array<{ endpoint: string; p256dh: string; auth: string }>;
+    if (targets.length === 0) return;
+    const name = (callerName || "").trim() || "Elio";
+    const results = await Promise.allSettled(
+      targets.map((tg) =>
+        webpush.sendNotification(
+          { endpoint: tg.endpoint, keys: { p256dh: tg.p256dh, auth: tg.auth } },
+          JSON.stringify({
+            title: name,
+            body: kind === "video" ? "Chamada de vídeo 🎥" : "Chamada de voz 📞",
+            url: `/conversas/${convId}`,
+            tag: `call-${callId}`,
+            type: "call",
+            call_id: callId,
+          }),
+        ),
+      ),
+    );
+    const dead = targets.filter(
+      (_, i) =>
+        results[i]?.status === "rejected" &&
+        [404, 410].includes(
+          (results[i] as PromiseRejectedResult).reason?.statusCode ?? 0,
+        ),
+    );
+    if (dead.length > 0) {
+      await admin
+        .from("push_subscriptions")
+        .delete()
+        .in(
+          "endpoint",
+          dead.map((d) => d.endpoint),
+        );
+    }
+  } catch {
+    /* push nunca quebra a ligação */
+  }
+}
