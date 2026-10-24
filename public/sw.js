@@ -22,12 +22,22 @@ self.addEventListener("push", (event) => {
   };
   // chamada com o app aberto: a tela de Atender/Recusar já aparece; sem duplicar
   if (data.type === "call") {
+    const callOptions = {
+      ...options,
+      data: { url: data.url || "/conversas", callId: data.call_id || null },
+      vibrate: [400, 200, 400, 200, 800],
+      requireInteraction: true,
+      actions: [
+        { action: "answer", title: "Atender" },
+        { action: "decline", title: "Recusar" },
+      ],
+    };
     event.waitUntil(
       self.clients
         .matchAll({ type: "window", includeUncontrolled: true })
         .then((list) => {
           const visible = list.some((c) => c.visibilityState === "visible");
-          if (!visible) return self.registration.showNotification(data.title || "Elio", options);
+          if (!visible) return self.registration.showNotification(data.title || "Elio", callOptions);
           return undefined;
         }),
     );
@@ -38,7 +48,19 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || "/conversas";
+  const data = event.notification.data || {};
+  // "Recusar" direto na notificação: avisa o servidor (quem ligou descobre pelo radar)
+  if (event.action === "decline" && data.callId) {
+    event.waitUntil(
+      fetch(`/api/calls/${data.callId}/end`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject" }),
+      }).catch(() => undefined),
+    );
+    return;
+  }
+  const url = data.url || "/conversas";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
       for (const c of list) {

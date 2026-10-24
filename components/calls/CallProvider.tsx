@@ -15,7 +15,7 @@ import {
   callChannel, callReducer, ringChannel, ringPayloadSchema, RING_TIMEOUT_MS,
   type CallKind, type CallPeer, type CallPhase, type CallSession,
 } from "@/lib/calls";
-import { friendlyError, playPop } from "@/lib/utils";
+import { friendlyError, playPop, playRing, unlockAudio } from "@/lib/utils";
 import { t } from "@/lib/i18n";
 import { CallView } from "@/components/calls/CallView";
 
@@ -103,6 +103,7 @@ export function CallProvider({ children }: { children?: React.ReactNode }) {
   });
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const ringRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onRemoteByeRef = useRef(() => {});
 
   const clearTimers = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -130,21 +131,28 @@ export function CallProvider({ children }: { children?: React.ReactNode }) {
     }, 1200);
   }, []);
 
+  // desbloqueia o som no 1º gesto (exigência do navegador p/ o toque tocar)
+  useEffect(() => {
+    const unlock = () => unlockAudio();
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
   const startRingtone = useCallback(() => {
-    try {
-      navigator.vibrate?.(200);
-    } catch {
-      /* sem vibração */
-    }
-    playPop();
-    ringRef.current = setInterval(() => {
+    const ring = () => {
       try {
-        navigator.vibrate?.(200);
+        navigator.vibrate?.([400, 200, 400, 200, 800]);
       } catch {
         /* sem vibração */
       }
-      playPop();
-    }, 1800);
+      playRing();
+    };
+    ring();
+    ringRef.current = setInterval(ring, 2500);
   }, []);
 
   /* ---------- quem liga ---------- */
@@ -295,6 +303,41 @@ export function CallProvider({ children }: { children?: React.ReactNode }) {
     };
   }, [user, fetchPending, handleIncomingRing]);
 
+  /* Radar do fim: se o status mudou no servidor (recusou/desligou/caiu),
+     quem está na chamada descobre mesmo se o "bye" rápido se perder. */
+  const sessionId = session?.id;
+  useEffect(() => {
+    if (!user || !sessionId) return;
+    const sb = supabaseBrowser();
+    let ch: RealtimeChannel | null = null;
+    try {
+      ch = sb
+        .channel(`elio:call-status:${sessionId}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "calls", filter: `id=eq.${sessionId}` },
+          (p) => {
+            const status = ((p.new ?? {}) as { status?: string }).status;
+            if (status === "rejected" || status === "ended" || status === "missed") {
+              onRemoteByeRef.current();
+            }
+          },
+        )
+        .subscribe();
+    } catch {
+      ch = null;
+    }
+    return () => {
+      if (ch) {
+        try {
+          void sb.removeChannel(ch);
+        } catch {
+          /* ignora */
+        }
+      }
+    };
+  }, [user, sessionId]);
+
   useEffect(() => () => clearTimers(), [clearTimers]);
 
   /* ---------- ações ---------- */
@@ -351,6 +394,9 @@ export function CallProvider({ children }: { children?: React.ReactNode }) {
     dispatch({ type: "BYE" });
     resetSoon();
   }, [clearTimers, resetSoon, toast]);
+  useEffect(() => {
+    onRemoteByeRef.current = onRemoteBye;
+  });
 
   const onFailed = useCallback((message: string) => {
     const s = sessionRef.current;

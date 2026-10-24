@@ -235,3 +235,49 @@ export function playPop(): void {
     /* sem som — tudo bem */
   }
 }
+
+/**
+ * Desbloqueia o áudio (o navegador exige um toque antes de deixar tocar som).
+ * Chamar uma vez no primeiro gesto do usuário (tap/tecla).
+ */
+export function unlockAudio(): void {
+  try {
+    if (typeof window === "undefined") return;
+    audioCtx ??= new AudioContext();
+    if (audioCtx.state === "suspended") void audioCtx.resume();
+  } catch {
+    /* sem áudio — tudo bem */
+  }
+}
+
+/** "Trim-trim" clássico de telefone tocando. Falha silenciosamente. */
+export function playRing(): void {
+  try {
+    if (typeof window === "undefined") return;
+    audioCtx ??= new AudioContext();
+    if (audioCtx.state === "suspended") void audioCtx.resume();
+    if (audioCtx.state !== "running") return;
+    for (const at of [0, 0.35]) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(440, audioCtx.currentTime + at);
+      const osc2 = audioCtx.createOscillator();
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(480, audioCtx.currentTime + at);
+      gain.gain.setValueAtTime(0.0001, audioCtx.currentTime + at);
+      gain.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + at + 0.03);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime + at + 0.22);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + at + 0.3);
+      osc.connect(gain);
+      osc2.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(audioCtx.currentTime + at);
+      osc2.start(audioCtx.currentTime + at);
+      osc.stop(audioCtx.currentTime + at + 0.32);
+      osc2.stop(audioCtx.currentTime + at + 0.32);
+    }
+  } catch {
+    /* sem som — tudo bem */
+  }
+}
