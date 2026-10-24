@@ -35,4 +35,10 @@ describe("fileKind (espelha o servidor)", () => {
     expect(fileKind("application/javascript")).toBeNull();
     expect(fileKind("")).toBeNull();
   });
+
+  it("ignora parâmetros do mime (mensagem de voz)", () => {
+    expect(fileKind("audio/webm;codecs=opus")).toBe("audio");
+    expect(fileKind("audio/webm")).toBe("audio");
+    expect(fileKind("video/mp4;codecs=avc1")).toBe("video");
+  });
 });

@@ -28,10 +28,12 @@ export const MEDIA_LIMITS: Record<MediaKind, number> = {
 
 /** Classifica o arquivo pelo mime (null = não suportado). */
 export function fileKind(mime: string): MediaKind | null {
-  if (IMAGE_OK.includes(mime)) return "image";
-  if (VIDEO_OK.includes(mime)) return "video";
-  if (AUDIO_OK.includes(mime)) return "audio";
-  if (FILE_OK.includes(mime)) return "file";
+  // o gravador gera "audio/webm;codecs=opus": ignora parâmetros
+  const base = (mime.split(";")[0] ?? "").trim().toLowerCase();
+  if (IMAGE_OK.includes(base)) return "image";
+  if (VIDEO_OK.includes(base)) return "video";
+  if (AUDIO_OK.includes(base)) return "audio";
+  if (FILE_OK.includes(base)) return "file";
   return null;
 }
 

@@ -262,6 +262,8 @@ export function CallProvider({ children }: { children?: React.ReactNode }) {
         const res = await fetch(`/api/calls/${s.id}/accept`, { method: "POST" });
         const json = (await res.json().catch(() => ({}))) as { error?: string };
         if (!res.ok) throw new Error(json.error);
+        // avisa quem ligou (ele já está ouvindo o canal desde o início)
+        void broadcast({ channel: callChannel(s.id), event: "accepted", payload: {} });
         dispatch({ type: "ACCEPTED" });
       } catch (e) {
         void endRemote(s.id, "timeout");
@@ -316,6 +318,13 @@ export function CallProvider({ children }: { children?: React.ReactNode }) {
     resetSoon();
   }, [clearTimers, endRemote, resetSoon, toast]);
 
+  /** O outro lado atendeu (ou a resposta SDP chegou): sai do "chamando". */
+  const onActive = useCallback(() => {
+    if (phaseRef.current !== "ringing-out") return;
+    clearTimers();
+    dispatch({ type: "ACCEPTED" });
+  }, [clearTimers]);
+
   const value = useMemo(() => ({ phase, session, start }), [phase, session, start]);
 
   return (
@@ -331,6 +340,7 @@ export function CallProvider({ children }: { children?: React.ReactNode }) {
           onHangup={hangupLocal}
           onRemoteBye={onRemoteBye}
           onFailed={onFailed}
+          onActive={onActive}
         />
       )}
     </CallCtx.Provider>

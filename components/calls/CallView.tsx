@@ -20,6 +20,8 @@ interface Props {
   onHangup: () => void;
   onRemoteBye: () => void;
   onFailed: (message: string) => void;
+  /** Chamado quando o outro lado atendeu (quem ligou sai do "chamando"). */
+  onActive: () => void;
 }
 
 function fmtElapsed(s: number): string {
@@ -28,7 +30,7 @@ function fmtElapsed(s: number): string {
   return `${String(m).padStart(2, "0")}:${String(r).padStart(2, "0")}`;
 }
 
-export function CallView({ session, active, onHangup, onRemoteBye, onFailed }: Props) {
+export function CallView({ session, active, onHangup, onRemoteBye, onFailed, onActive }: Props) {
   const [muted, setMuted] = useState(false);
   const [camOff, setCamOff] = useState(false);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -38,11 +40,14 @@ export function CallView({ session, active, onHangup, onRemoteBye, onFailed }: P
   const chRef = useRef<RealtimeChannel | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
   const byeRef = useRef(onRemoteBye);
   const failedRef = useRef(onFailed);
+  const activeRef = useRef(onActive);
   useEffect(() => {
     byeRef.current = onRemoteBye;
     failedRef.current = onFailed;
+    activeRef.current = onActive;
   });
 
   const video = session.kind === "video";
@@ -60,6 +65,10 @@ export function CallView({ session, active, onHangup, onRemoteBye, onFailed }: P
   }, [localStream]);
   useEffect(() => {
     if (remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
+  }, [remoteStream]);
+  // voz: sem <video> remoto, o som precisa de um <audio> dedicado
+  useEffect(() => {
+    if (remoteAudioRef.current) remoteAudioRef.current.srcObject = remoteStream;
   }, [remoteStream]);
 
   // WebRTC: mídia + peer connection + sinalização
@@ -142,6 +151,9 @@ export function CallView({ session, active, onHangup, onRemoteBye, onFailed }: P
             await ch
               .send({ type: "broadcast", event: "sdp", payload: { sdp: { type: answer.type, sdp: answer.sdp } } })
               .catch(() => undefined);
+          } else if (parsed.data.sdp.type === "answer" && session.am_caller) {
+            // resposta só existe depois do "atender": garante que quem ligou sai do "chamando"
+            if (!cancelled) activeRef.current();
           }
         } catch {
           /* oferta inválida: ignora */
@@ -157,6 +169,12 @@ export function CallView({ session, active, onHangup, onRemoteBye, onFailed }: P
       ch.on("broadcast", { event: "bye" }, (p) => {
         if (byePayloadSchema.safeParse(p.payload).success && !cancelled) byeRef.current();
       });
+      // o outro lado atendeu: quem ligou sai do "chamando"
+      if (session.am_caller) {
+        ch.on("broadcast", { event: "accepted" }, () => {
+          if (!cancelled) activeRef.current();
+        });
+      }
       // quem recebe avisa "pronto"; quem liga (re)envia a oferta (a 1ª pode se perder)
       async function sendOffer() {
         try {
@@ -241,6 +259,8 @@ export function CallView({ session, active, onHangup, onRemoteBye, onFailed }: P
 
   return (
     <div className="fixed inset-0 z-[var(--z-call,_80)] bg-black/90 flex flex-col items-center justify-between p-6" role="dialog" aria-modal="true" aria-label={t("calls.title")}>
+      {/* voz: alto-falante invisível (no vídeo, o próprio <video> remoto toca o som) */}
+      {!video && <audio ref={remoteAudioRef} autoPlay playsInline className="hidden" />}
       {/* remoto: vídeo ou avatar */}
       <div className="flex-1 w-full max-w-lg flex items-center justify-center relative">
         {video && remoteStream ? (
